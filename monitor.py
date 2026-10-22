@@ -10,6 +10,8 @@ import time
 import requests
 
 TOPIC = os.environ["NTFY_TOPIC"]
+LINE_TOKEN = os.environ.get("LINE_TOKEN", "").strip()
+LINE_USER_ID = os.environ.get("LINE_USER_ID", "").strip()
 FULL_REPORT = os.environ.get("FULL_REPORT", "false").lower() == "true"
 PARTS = [p.strip() for p in os.environ.get("PARTS", "").split(",") if p.strip()]
 STORE_KEYWORDS = {"101": "101", "A13": "A13"}
@@ -127,6 +129,27 @@ def fetch_delivery(part, state):
     return None, "；".join(notes)
 
 
+def notify(title, msg):
+    """同時推播到 ntfy 與 LINE（LINE 沒設定就略過；任一邊失敗不影響另一邊）。"""
+    try:
+        requests.post("https://ntfy.sh/", json={"topic": TOPIC, "title": title, "message": msg,
+                                                "priority": 4, "click": CLICK}, timeout=20)
+    except Exception as e:  # noqa: BLE001
+        print("ntfy 發送失敗:", e)
+    if LINE_TOKEN and LINE_USER_ID:
+        try:
+            r = requests.post(
+                "https://api.line.me/v2/bot/message/push",
+                headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
+                json={"to": LINE_USER_ID,
+                      "messages": [{"type": "text", "text": f"{title}\n{msg}\n{CLICK}"[:4900]}]},
+                timeout=20,
+            )
+            print("LINE:", r.status_code, r.text[:200])
+        except Exception as e:  # noqa: BLE001
+            print("LINE 發送失敗:", e)
+
+
 def main():
     if not PARTS:
         sys.exit("沒有料號")
@@ -198,8 +221,7 @@ def main():
     if delivery_notes:
         print("配送查詢失敗:", delivery_notes)
     if msg:
-        requests.post("https://ntfy.sh/", json={"topic": TOPIC, "title": title, "message": msg,
-                                                "priority": 4, "click": CLICK}, timeout=20)
+        notify(title, msg)
     json.dump(new, open(STATE_FILE, "w"), ensure_ascii=False, indent=1)
     if len(errors) == len(PARTS):
         sys.exit("全部取貨查詢失敗：\n" + "\n".join(errors))
