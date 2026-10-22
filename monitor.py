@@ -129,7 +129,7 @@ def fetch_delivery(part, state):
     return None, "；".join(notes)
 
 
-def notify(title, msg):
+def notify(title, msg, line_msg=None):
     """同時推播到 ntfy 與 LINE（LINE 沒設定就略過；任一邊失敗不影響另一邊）。"""
     try:
         requests.post("https://ntfy.sh/", json={"topic": TOPIC, "title": title, "message": msg,
@@ -142,7 +142,7 @@ def notify(title, msg):
                 "https://api.line.me/v2/bot/message/push",
                 headers={"Authorization": f"Bearer {LINE_TOKEN}", "Content-Type": "application/json"},
                 json={"to": LINE_USER_ID,
-                      "messages": [{"type": "text", "text": f"{title}\n{msg}\n{CLICK}"[:4900]}]},
+                      "messages": [{"type": "text", "text": f"{title}\n{line_msg if line_msg is not None else msg}\n{CLICK}"[:4900]}]},
                 timeout=20,
             )
             print("LINE:", r.status_code, r.text[:200])
@@ -220,7 +220,11 @@ def main():
     if delivery_notes:
         print("配送查詢失敗:", delivery_notes)
     if msg:
-        notify(title, msg)
+        # LINE 版本不含配送：移除每行的「｜配送…」以及配送查詢失敗的提示
+        line_msg = "\n".join(
+            re.sub(r"｜配送.*$", "", ln) for ln in msg.split("\n") if not ln.startswith("⚠ 配送")
+        ).strip()
+        notify(title, msg, line_msg)
     json.dump(new, open(STATE_FILE, "w"), ensure_ascii=False, indent=1)
     if len(errors) == len(PARTS):
         sys.exit("全部取貨查詢失敗：\n" + "\n".join(errors))
