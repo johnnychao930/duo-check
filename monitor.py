@@ -199,8 +199,7 @@ def main():
         else:
             new[key] = buyable
             cells.append("配送 " + (text or "有貨") if buyable else "配送 無貨")
-            if buyable and key in old and not old[key]:
-                changes.append(f"{name}｜配送有貨 {text}".strip())
+            # 配送有貨不推播（只在手動查詢的完整報告中顯示）
         report.append(f"{name}：" + "｜".join(cells))
 
     new["_delivery_idx"] = dstate["idx"]
