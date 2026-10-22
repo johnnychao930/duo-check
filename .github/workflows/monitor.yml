@@ -31,6 +31,8 @@ jobs:
       - name: 檢查庫存
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
           FULL_REPORT: ${{ github.event.inputs.full_report || 'false' }}
           PARTS: "MK2D4ZP/A,MK2E4ZP/A,MK2F4ZP/A,MK2G4ZP/A,MK2H4ZP/A,MK2J4ZP/A,MK2K4ZP/A,MK2L4ZP/A"
         run: python monitor.py
