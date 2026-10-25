@@ -8,7 +8,7 @@ on:
       full_report:
         description: "回報完整庫存狀態（手動查詢用）"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
